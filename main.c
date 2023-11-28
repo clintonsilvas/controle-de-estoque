@@ -23,6 +23,8 @@ void gera_Arq_txt(FILE *arquivoBin);
 void excluir(FILE *arquivoBin);
 void excluir_codigo(FILE *arquivoBin);
 void excluir_descricao(FILE *arquivoBin);
+void incluir(FILE *arquivoBin);
+void incluir_codigo(FILE *arquivo);
 void incluir_descricao(FILE *arquivoBin);
 
 int main(void) {
@@ -38,7 +40,7 @@ int main(void) {
   }
 
   do {
-    system("clear");
+    system("cls");
     printf("\n========= ESTOQUE =========== \n");
     printf("1.Cadastrar produto\n");
     printf("2.Consultar produto\n");
@@ -63,7 +65,7 @@ int main(void) {
       excluir(arquivoBin);
       break;
     case 5:
-      incluir_descricao(arquivoBin);
+      incluir(arquivoBin);
     }
   } while (op != 6);
   printf("\n==Programa finalizado com sucesso.==\n");
@@ -119,7 +121,7 @@ void consultar(FILE *arquivoBin) {
   printf("\n==Consulta de produtos cadastrados.==\n");
   do {
     getchar();
-    printf("\nDejesa consultar por:");
+    printf("\n\nDejesa consultar por:");
     printf("\n1.Código");
     printf("\n2.Descrição");
     printf("\n3.Voltar");
@@ -151,7 +153,7 @@ void consulta_codigo(FILE *arquivoBin) {
       printf("\nPreço de venda:..: %.2f", produto.preco_venda);
       printf("\nUnidade:.........: %s", produto.unidade);
       printf("\nFornecedor:......: %s", produto.fornecedor);
-      printf("\nEstique:.........: %d", produto.quant_est);
+      printf("\nEstoque:.........: %d", produto.quant_est);
     } else
       printf("\nProduto inativo.\n");
   } else
@@ -246,6 +248,7 @@ void excluir(FILE *arquivoBin) {
     }
   } while (opcao != '3');
 }
+
 void excluir_codigo(FILE *arquivoBin) {
   produto produto;
   char confirma;
@@ -324,41 +327,78 @@ void excluir_descricao(FILE *arquivoBin) {
   }
 }
 
+void incluir(FILE *arquivoBin) {
+  produto produto;
+  char opcao;
+  printf("\n==Inclusão de produtos cadastrados.==\n");
+  do {
+    getchar();
+    printf("\nDejesa Incluir por:");
+    printf("\n1.Código");
+    printf("\n2.Descrição");
+    printf("\n3.Voltar");
+    printf("\nOpção:");
+    scanf("%c", &opcao);
+    getchar();
+    switch (opcao) {
+    case '1':
+      incluir_codigo(arquivoBin);
+      break;
+    case '2':
+      incluir_descricao(arquivoBin);
+      break;
+    }
+  } while (opcao != '3');
+}
+
 void incluir_descricao(FILE *arquivoBin) {
   produto novo_produto;
   char confirma;
   char descricao_incluir[100];
   int encontrado = 0; // Flag para verificar se o produto foi encontrado
 
+  // Solicita a descrição do produto a ser incluído novamente
   printf("\nInforme a descricao do registro para incluir novamente: ");
   fgets(descricao_incluir, sizeof(descricao_incluir), stdin);
   descricao_incluir[strcspn(descricao_incluir, "\n")] =
-      '\0';                   // Remove o caractere de nova linha
-  getchar();
-  fseek(arquivoBin, 0, SEEK_SET); // Posiciona o ponteiro no início do arquivo
+      '\0';  // Remove o caractere de nova linha
 
+  // Limpa o buffer de entrada antes de continuar
+  int c;
+  while ((c = getchar()) != '\n' && c != EOF);
+
+  // Posiciona o ponteiro no início do arquivo
+  fseek(arquivoBin, 0, SEEK_SET);
+
+  // Loop para percorrer o arquivo em busca do produto
   while (fread(&novo_produto, sizeof(novo_produto), 1, arquivoBin) == 1) {
+    // Verifica se a descrição do produto coincide com a informada
     if (strncmp(novo_produto.descricao, descricao_incluir,
                 strlen(descricao_incluir)) == 0) {
       encontrado = 1; // Marca que o produto foi encontrado
+
+      // Verifica se o produto está inativo
       if (novo_produto.status == 'i') {
+        // Exibe informações do produto
         printf("\nDescrição:.......:%s", novo_produto.descricao);
         printf("\nPreço de venda:..:%f", novo_produto.preco_venda);
         printf("\nUnidade:.........:%s", novo_produto.unidade);
         printf("\nFornecedor:......:%s", novo_produto.fornecedor);
         printf("\nEstoque:.........:%d", novo_produto.quant_est);
 
-        printf("\nConfirma a inclusão novamente: <s/n>\n");
+        // Solicita confirmação para reativar o produto
+        printf("\nConfirma a reativação do produto: <s/n>\n");
         scanf(" %c", &confirma);
+
+        // Se confirmado, reativa o produto
         if (toupper(confirma) == 'S') {
-          printf("\n== Incluindo novamente... ==\n\n");
-          // Volta para o final do arquivo
-          fseek(arquivoBin, 0, SEEK_END);
-          novo_produto.status = 'a';  // Marcando como ativo
+          printf("\n== Reativando produto... ==\n\n");
+          fseek(arquivoBin, -sizeof(novo_produto), SEEK_CUR);
+          novo_produto.status = 'a'; // Marcando como ativo
           fwrite(&novo_produto, sizeof(novo_produto), 1, arquivoBin);
-          printf("\n=== Produto incluído novamente com sucesso ===\n");
+          printf("\n=== Produto reativado com sucesso ===\n");
         } else {
-          printf("\nProduto não incluído novamente.\n");
+          printf("\nReativação do produto cancelada.\n");
         }
       } else {
         printf("\nProduto já está ativo.\n");
@@ -367,8 +407,53 @@ void incluir_descricao(FILE *arquivoBin) {
     }
   }
 
+  // Se não encontrou o produto, exibe mensagem
   if (!encontrado) {
-    // Chegou ao final do arquivo sem encontrar o produto
     printf("\nProduto não encontrado.\n");
+  }
+}
+
+
+
+void incluir_codigo(FILE *arquivoBin) {
+  produto novo_produto;
+  char confirma;
+  int codigo_incluir;
+  printf("\nInforme o codigo do registro para incluir novamente: ");
+  scanf("%d", &codigo_incluir);
+  getchar();
+
+  if ((codigo_incluir <= tamanho(arquivoBin)) && (codigo_incluir > 0)) {
+    fseek(arquivoBin, (codigo_incluir - 1) * sizeof(produto), SEEK_SET);
+    fread(&novo_produto, sizeof(novo_produto), 1, arquivoBin);
+
+    // Verifica se o produto está inativo
+    if (novo_produto.status == 'i') {
+      // Exibe informações do produto
+      printf("\nDescrição:.......:%s", novo_produto.descricao);
+      printf("\nPreço de venda:..:%f", novo_produto.preco_venda);
+      printf("\nUnidade:.........:%s", novo_produto.unidade);
+      printf("\nFornecedor:......:%s", novo_produto.fornecedor);
+      printf("\nEstoque:.........:%d", novo_produto.quant_est);
+
+      // Solicita confirmação para reativar o produto
+      printf("\nConfirma a reativação do produto: <s/n>\n");
+      scanf(" %c", &confirma);
+
+      // Se confirmado, reativa o produto
+      if (toupper(confirma) == 'S') {
+        printf("\n== Reativando produto... ==\n\n");
+        fseek(arquivoBin, -sizeof(novo_produto), SEEK_CUR);
+        novo_produto.status = 'a'; // Marcando como ativo
+        fwrite(&novo_produto, sizeof(novo_produto), 1, arquivoBin);
+        printf("\n=== Produto reativado com sucesso ===\n");
+      } else {
+        printf("\nReativação do produto cancelada.\n");
+      }
+    } else {
+      printf("\nProduto já está ativo.\n");
+    }
+  } else {
+    printf("\nNumero de registro invalido!\n");
   }
 }
