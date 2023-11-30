@@ -26,6 +26,7 @@ void excluir_descricao(FILE *arquivoBin);
 void incluir(FILE *arquivoBin);
 void incluir_codigo(FILE *arquivo);
 void incluir_descricao(FILE *arquivoBin);
+produto atualiza_produto(FILE *arquivoBin);
 
 int main(void) {
   setlocale(LC_ALL, "Portuguese");
@@ -40,14 +41,15 @@ int main(void) {
   }
 
   do {
-    system("cls");
+    system("clear");
     printf("\n========= ESTOQUE =========== \n");
     printf("1.Cadastrar produto\n");
     printf("2.Consultar produto\n");
     printf("3.Gerar arquivo\n");
     printf("4.Excluir registro\n");
     printf("5.Incluir registro\n");
-    printf("6.Sair\n");
+    printf("6.Editar Produto\n");
+    printf("7.Sair\n");
     printf("======= Produtos Cadastrados:%d=\n", tamanho(arquivoBin));
     printf("Opcao:");
     scanf("%d", &op);
@@ -66,8 +68,14 @@ int main(void) {
       break;
     case 5:
       incluir(arquivoBin);
+      break;
+    case 6:
+      atualiza_produto(arquivoBin);
+      break;
+    default:
+      printf("\nOpção inválida");
     }
-  } while (op != 6);
+  } while (op != 7);
   printf("\n==Programa finalizado com sucesso.==\n");
 
   return 0;
@@ -279,7 +287,6 @@ void excluir_codigo(FILE *arquivoBin) {
       printf("Registro já inativo! \n");
   } else
     printf("\nNumero de registro invalido!\n");
-  
 }
 
 void excluir_descricao(FILE *arquivoBin) {
@@ -295,8 +302,8 @@ void excluir_descricao(FILE *arquivoBin) {
 
   while (fread(&produto, sizeof(produto), 1, arquivoBin) == 1) {
     if (strncmp(produto.descricao, descricao_excluir,
-                strlen(descricao_excluir)) ==0) 
-                { // compara string digitada com
+                strlen(descricao_excluir)) ==
+        0) { // compara string digitada com
       if (produto.status == 'a') {
         printf("\nDescrição:.......:%s", produto.descricao);
         printf("\nPreço de venda:..:%f", produto.preco_venda);
@@ -361,11 +368,12 @@ void incluir_descricao(FILE *arquivoBin) {
   printf("\nInforme a descricao do registro para incluir novamente: ");
   fgets(descricao_incluir, sizeof(descricao_incluir), stdin);
   descricao_incluir[strcspn(descricao_incluir, "\n")] =
-      '\0';  // Remove o caractere de nova linha
+      '\0'; // Remove o caractere de nova linha
 
   // Limpa o buffer de entrada antes de continuar
   int c;
-  while ((c = getchar()) != '\n' && c != EOF);
+  while ((c = getchar()) != '\n' && c != EOF)
+    ;
 
   // Posiciona o ponteiro no início do arquivo
   fseek(arquivoBin, 0, SEEK_SET);
@@ -413,8 +421,6 @@ void incluir_descricao(FILE *arquivoBin) {
   }
 }
 
-
-
 void incluir_codigo(FILE *arquivoBin) {
   produto novo_produto;
   char confirma;
@@ -456,4 +462,73 @@ void incluir_codigo(FILE *arquivoBin) {
   } else {
     printf("\nNumero de registro invalido!\n");
   }
+}
+
+produto atualiza_produto(FILE *arquivoBin) {
+  char confirma;
+  int codigo_atualizar, opcao;
+  produto produtos;
+  produto aux;
+  printf("\n=======EDITANDO CADASTRO=======\n");
+  printf("Qual produto deseja atualizar: ");
+  scanf("%d", &codigo_atualizar);
+
+  if (codigo_atualizar <= tamanho(arquivoBin) && codigo_atualizar > 0) {
+    fseek(arquivoBin, (codigo_atualizar - 1) * sizeof(produto), SEEK_SET);
+
+    fread(&aux, sizeof(produto), 1, arquivoBin);
+
+    do {
+      system("clear");
+      printf("\nQual campo deseja alterar no produto: %s", produtos.descricao);
+      printf("\n1. Descrição.");
+      printf("\n2. Preço de venda.");
+      printf("\n3. Unidade.");
+      printf("\n4. Fornecedor.");
+      printf("\n5. Quantidade em estoque.");
+      printf("\nDigite a opção desejada: ");
+      scanf("%d", &opcao);
+
+      switch (opcao) {
+      case 1:
+        printf("\nDigite a nova descrição: ");
+        getchar();
+        gets(aux.descricao);
+        break;
+      case 2:
+        printf("\nDigite o novo preço de venda: ");
+        scanf("%f", &aux.preco_venda);
+        break;
+      case 3:
+        printf("\nDigite a nova unidade: ");
+        getchar();
+        gets(aux.unidade);
+        break;
+      case 4:
+        printf("\nDigite o novo fornecedor: ");
+        getchar();
+        gets(aux.fornecedor);
+        break;
+      case 5:
+        printf("\nDigite a nova quantidade em estoque: ");
+        scanf("%d", &aux.quant_est);
+        break;
+      default:
+        printf("\nOpcao invalida. Tente novamente.\n");
+      }
+      printf("\n Deseja alterar mais algum dado? <s/n> \n");
+      scanf("%c", &confirma);
+      getchar();
+      
+    } while (toupper(confirma) == 'S');
+    fseek(arquivoBin, (codigo_atualizar - 1) * sizeof(produto), SEEK_SET);
+    fwrite(&aux, sizeof(produto), 1, arquivoBin);
+    printf("\n==Produto editado com sucesso.==\n");
+    getchar();
+    return aux;
+  } else {
+    printf("=====Produto não encontrado======\n");
+  }
+
+  return produtos;
 }
